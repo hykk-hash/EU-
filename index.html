@@ -75,11 +75,22 @@ try{
      }catch(e){status.textContent='⚠️ 同步失敗：'+e.message}
    },600);
  };
- document.getElementById('cloudLogin').onclick=async()=>{
-   try{await signInWithPopup(auth,provider)}catch(e){
-     if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code)){
-       try{await signInWithRedirect(auth,provider)}catch(err){alert('登入失敗：'+err.message)}
-     }else alert('Google 登入失敗：'+e.message);
+ const loginButton=document.getElementById('cloudLogin');
+ loginButton.onclick=async()=>{
+   if(loginButton.disabled)return;
+   loginButton.disabled=true;
+   const oldText=loginButton.textContent;
+   loginButton.textContent='正在前往 Google 登入…';
+   status.textContent='正在開啟 Google 登入頁面…';
+   try{
+     // iPhone Safari: avoid repeated popup requests and popup cancellation.
+     await signInWithRedirect(auth,provider);
+   }catch(e){
+     status.textContent='⚠️ 登入啟動失敗：'+(e.code||e.message);
+     alert('Google 登入失敗：'+e.message);
+   }finally{
+     loginButton.disabled=false;
+     loginButton.textContent=oldText;
    }
  };
  document.getElementById('cloudLogout').onclick=()=>signOut(auth);
