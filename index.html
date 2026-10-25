@@ -26,7 +26,7 @@ const firebaseConfig={
 };
 const status=document.getElementById('cloudStatus');
 try{
- const [{initializeApp},{getAuth,onAuthStateChanged,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,signOut},{getFirestore,collection,doc,onSnapshot,setDoc,serverTimestamp,writeBatch}]=await Promise.all([
+ const [{initializeApp},{getAuth,onAuthStateChanged,GoogleAuthProvider,signInWithPopup,signOut},{getFirestore,collection,doc,onSnapshot,setDoc,serverTimestamp,writeBatch}]=await Promise.all([
   import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js'),
   import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js'),
   import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js')
@@ -79,22 +79,30 @@ try{
  loginButton.onclick=async()=>{
    if(loginButton.disabled)return;
    loginButton.disabled=true;
-   const oldText=loginButton.textContent;
-   loginButton.textContent='正在前往 Google 登入…';
-   status.textContent='正在開啟 Google 登入頁面…';
+   loginButton.textContent='Google 登入中…';
+   status.textContent='正在開啟 Google 登入視窗，請稍候…';
    try{
-     // iPhone Safari: avoid repeated popup requests and popup cancellation.
-     await signInWithRedirect(auth,provider);
+     // GitHub Pages and firebaseapp.com are different domains. Popup avoids
+     // Safari's cross-origin redirect-result storage restrictions.
+     await signInWithPopup(auth,provider);
+     status.textContent='Google 登入成功，正在讀取雲端資料…';
    }catch(e){
-     status.textContent='⚠️ 登入啟動失敗：'+(e.code||e.message);
-     alert('Google 登入失敗：'+e.message);
+     const code=e.code||'unknown';
+     const help={
+       'auth/popup-blocked':'Safari 可能封鎖彈出視窗。請直接在 Safari 開啟網站，並允許彈出視窗後再試。',
+       'auth/cancelled-popup-request':'登入請求被取消。請等候數秒後只按一次登入按鈕。',
+       'auth/popup-closed-by-user':'登入視窗已關閉，請重新按一次登入。',
+       'auth/unauthorized-domain':'請確認 Firebase Authentication 的 Authorized domains 包含 hykk-hash.github.io。',
+       'auth/operation-not-supported-in-this-environment':'目前瀏覽器不支援彈出式登入，請在 Safari App 直接開啟。'
+     }[code]||'請截圖錯誤代碼給我，以便確認問題。';
+     status.textContent='⚠️ 登入未完成：'+code+'。'+help;
+     alert('Google 登入未完成 ('+code+')\n'+help);
    }finally{
      loginButton.disabled=false;
-     loginButton.textContent=oldText;
+     loginButton.textContent='使用 Google 登入';
    }
  };
  document.getElementById('cloudLogout').onclick=()=>signOut(auth);
- getRedirectResult(auth).catch(e=>{status.textContent='⚠️ Google 登入失敗：'+e.message});
  onAuthStateChanged(auth,user=>{
    if(unsub){unsub();unsub=null}ready=false;loaded=false;clearTimeout(debounce);
    document.getElementById('cloudInitialize')?.remove();
